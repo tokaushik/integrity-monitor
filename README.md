@@ -16,11 +16,11 @@ Zero third-party packages are required—anyone cloning this repository can run 
 
 While building the core SHA-256 check, I noticed a few practical limitations in simple hash-comparison scripts and added four lightweight ideas using `hashlib` and `os`:
 
-1. **Block-Level Tamper Localization (`B01:ok  B02:DIFF` / `B03:+NEW`)**
-   Due to the cryptographic *avalanche effect*, flipping even a single character completely changes a file's 64-character SHA-256 hash. That proves tampering happened, but doesn't tell you *where* or *how* the file changed. Alongside the full-file SHA-256, this tool splits the file into up to 16 fixed-size byte blocks and stores short block digests. Without saving a plaintext backup copy of potentially sensitive files, it can distinguish:
-   - In-place edits within a specific byte range (`B01:ok  B02:DIFF  B03:ok`)
-   - Data appended to the end of logs or CSVs while original bytes remain untouched (`B01:ok  B02:ok  B03:+NEW`)
-   - File truncation (`B01:ok  B02:CUT`)
+1. **Part-by-Part Tamper Localization (`Part 1:ok  Part 2:CHANGED`)**
+   Due to the cryptographic *avalanche effect*, flipping even a single character completely changes a file's 64-character SHA-256 hash. That proves tampering happened, but doesn't tell you *where* or *how* the file changed. Alongside the full-file SHA-256, this tool splits the file into up to 16 equal byte parts and stores short digests for each part. Without saving a plaintext backup copy of potentially sensitive files, it can distinguish:
+   - In-place edits within a specific section (`Part 1:ok  Part 2:CHANGED  Part 3:ok`)
+   - Data appended to the end of logs or CSVs while original bytes remain untouched (`Part 1:ok  Part 2:ok  Part 3:ADDED`)
+   - File truncation (`Part 1:ok  Part 2:REMOVED`)
 
 2. **Tamper-Evident Baseline Seal ("Guarding the Baseline")**
    If stored hashes live in a plain JSON file (`baseline.json`), someone who modifies a monitored file could also open `baseline.json` and paste in the new hash to hide the edit. To prevent this, baseline entries are signed with a keyed SHA-256 seal (`core/seal.py` using `os.urandom` + `hashlib.sha256`). Any manual edit to `baseline.json` triggers a `BASELINE SEAL BROKEN` warning.
@@ -137,8 +137,8 @@ python main.py remove path/to/config.ini
   Current Hash : 039f7832 27204fe9 9f06f648 d5d09c3f a4653abb e800d338 dbbd3297 bad83774
   Byte Size    : 248 B -> 248 B (no size change)
   Timestamp    : 2026-10-30 20:58:12
-  Block Matrix : B01:ok  B02:DIFF  B03:ok  B04:ok  (~64 B/block)
-  Finding      : Tampering detected across 1 block(s); first divergence in Block 2 (bytes 64-128)
+  File Parts   : Part 1:ok  Part 2:CHANGED  Part 3:ok  Part 4:ok  (~64 B each)
+  Finding      : Modified in 1 part(s); first change in Part 2 (bytes 64-128)
 ----------------------------------------------------------------------------
 
 ----------------------------------------------------------------------------
@@ -148,7 +148,7 @@ python main.py remove path/to/config.ini
   Current Hash : cdeeb4f3 53ac10e0 17c4e162 fba911e5 1aa68348 77359a18 77cf8023 05a05262
   Byte Size    : 128 B -> 155 B (+27 B)
   Timestamp    : 2026-10-30 20:58:12
-  Block Matrix : B01:ok  B02:ok  B03:+NEW  (~64 B/block)
+  File Parts   : Part 1:ok  Part 2:ok  Part 3:ADDED  (~64 B each)
   Finding      : Original blocks intact; new data appended at end (+27 bytes)
 ----------------------------------------------------------------------------
 ```

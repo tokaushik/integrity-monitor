@@ -10,49 +10,49 @@
   <!-- Top Workbench Bar -->
   <header class="workbench-bar">
     <div class="bar-left">
-      <span class="spec-tag">SHA-256 // OS+HASHLIB</span>
+      <span class="spec-tag">SHA-256</span>
       <div class="title-block">
         <h1>File Integrity Workbench</h1>
       </div>
 
       <nav class="view-tabs" aria-label="Views">
-        <button class="view-tab active" data-view="inspector">Inspector</button>
-        <button class="view-tab" data-view="ledger">Summary Ledger <span id="tab-count-total" class="tab-num">0</span></button>
-        <button class="view-tab" data-view="audit">Audit Log</button>
+        <button class="view-tab active" data-view="inspector">File Inspector</button>
+        <button class="view-tab" data-view="ledger">All Files <span id="tab-count-total" class="tab-num">0</span></button>
+        <button class="view-tab" data-view="audit">History Log</button>
       </nav>
     </div>
 
     <div class="bar-right">
-      <div id="seal-stamp" class="seal-tag seal-valid" title="Keyed SHA-256 seal protecting baseline.json">
-        DB SEAL: VALID
+      <div id="seal-stamp" class="seal-tag seal-valid" title="Protects baseline.json against manual edits">
+        Baseline: Protected
       </div>
 
-      <label class="poll-switch" title="Automatically re-verify all tracked files every 3 seconds">
+      <label class="poll-switch" title="Automatically re-check all monitored files every 3 seconds">
         <input type="checkbox" id="live-watch-checkbox" />
-        <span>Auto-Poll (3s)</span>
+        <span>Auto-Check (3s)</span>
       </label>
 
-      <button id="btn-check-all" class="btn btn-primary">Verify All Files</button>
+      <button id="btn-check-all" class="btn btn-primary">Check All Files</button>
     </div>
   </header>
 
   <!-- Critical Seal Warning Banner -->
   <div id="seal-alert-banner" class="seal-warning hidden">
     <strong>BASELINE TAMPERING DETECTED:</strong>
-    <code>baseline.json</code> failed cryptographic seal verification. Stored reference hashes may have been edited outside this tool.
+    <code>baseline.json</code> was edited outside this tool. Stored reference hashes may not be trustworthy.
   </div>
 
   <!-- Registration Toolbar -->
   <section class="register-strip">
     <div class="register-inner">
-      <label for="path-input" class="strip-label">REGISTER TARGET:</label>
+      <label for="path-input" class="strip-label">Monitor File / Folder:</label>
       <input
         type="text"
         id="path-input"
-        placeholder="Paste a file or directory path, or use Browse..."
+        placeholder="Paste a file or folder path, or click Select File..."
         autocomplete="off"
       />
-      <button id="btn-add-path" class="btn btn-ink">Record Baseline</button>
+      <button id="btn-add-path" class="btn btn-ink">Add Path</button>
       <div class="strip-divider"></div>
       <button id="btn-browse-file" class="btn btn-paper">Select File...</button>
       <button id="btn-browse-folder" class="btn btn-paper">Select Folder...</button>
@@ -67,28 +67,28 @@
       <!-- Left File Registry Rail -->
       <aside class="registry-rail">
         <div class="rail-header">
-          <span class="rail-title">TRACKED REGISTRY</span>
+          <span class="rail-title">Monitored Files</span>
           <div class="filter-group">
             <button class="filter-btn active" data-filter="all">All (<span id="cnt-all">0</span>)</button>
-            <button class="filter-btn" data-filter="verified">OK (<span id="cnt-ok">0</span>)</button>
-            <button class="filter-btn" data-filter="flagged">Flagged (<span id="cnt-flagged">0</span>)</button>
+            <button class="filter-btn" data-filter="verified">Intact (<span id="cnt-ok">0</span>)</button>
+            <button class="filter-btn" data-filter="flagged">Changed (<span id="cnt-flagged">0</span>)</button>
           </div>
         </div>
 
         <div id="registry-list" class="registry-list">
-          <div class="rail-empty">No files registered yet.</div>
+          <div class="rail-empty">No files added yet.</div>
         </div>
       </aside>
 
       <!-- Right Cryptographic Inspection Sheet -->
       <div id="inspection-stage" class="inspection-stage">
         <div class="empty-sheet">
-          <div class="empty-code">FIM // READY</div>
-          <h2>Select or Register a File to Begin Inspection</h2>
+          <div class="empty-code">GETTING STARTED</div>
+          <h2>Select a File to Start Monitoring</h2>
           <p>
-            Choose a file using <strong>Select File...</strong> above to compute its 256-bit SHA-256 reference hash
-            and fixed-size block digests. Re-verify at any time to detect unauthorized modifications,
-            data appends, truncations, or file renames.
+            Click <strong>Select File...</strong> above to generate and save a file's reference SHA-256 hash.
+            Whenever you check the file later, this tool generates a new hash and shows whether the file
+            is intact, modified, renamed, or deleted.
           </p>
         </div>
       </div>

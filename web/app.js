@@ -71,20 +71,20 @@ function effectiveStatus(fileItem, sealValid) {
 }
 
 function shortTagText(status) {
-  if (status === "INTACT") return "OK";
-  if (status === "MODIFIED") return "DIFF";
-  if (status === "RENAMED") return "MOVED";
-  if (status === "MISSING") return "LOST";
-  if (status === "UNTRUSTED") return "SEAL!";
+  if (status === "INTACT") return "Intact";
+  if (status === "MODIFIED") return "Changed";
+  if (status === "RENAMED") return "Renamed";
+  if (status === "MISSING") return "Missing";
+  if (status === "UNTRUSTED") return "Tampered DB";
   return status;
 }
 
 function stampLabel(status) {
-  if (status === "INTACT") return "VERIFIED · INTACT";
-  if (status === "MODIFIED") return "TAMPERED · HASH MISMATCH";
-  if (status === "RENAMED") return "RELOCATED · RENAMED";
-  if (status === "MISSING") return "ALERT · FILE MISSING";
-  if (status === "UNTRUSTED") return "UNTRUSTED · SEAL BROKEN";
+  if (status === "INTACT") return "Intact · Verified";
+  if (status === "MODIFIED") return "Modified · Hash Mismatch";
+  if (status === "RENAMED") return "Moved / Renamed";
+  if (status === "MISSING") return "Missing / Deleted";
+  if (status === "UNTRUSTED") return "Untrusted · DB Tampered";
   return status;
 }
 
@@ -102,10 +102,10 @@ async function apiCall(url, method = "GET", payload = null) {
   return data;
 }
 
-/* Render 64-char SHA-256 as eight 8-char words, highlighting nibble diffs */
+/* Render 64-char SHA-256 in readable 8-char groups, highlighting changed digits */
 function renderDigestWords(hashStr, compareAgainst = null) {
   if (!hashStr || hashStr.length !== 64) {
-    return `<span style="color:var(--vermilion-ink)">UNAVAILABLE (file not found at path)</span>`;
+    return `<span style="color:var(--vermilion-ink)">Unavailable (file not found at path)</span>`;
   }
 
   const words = [];
@@ -127,12 +127,7 @@ function renderDigestWords(hashStr, compareAgainst = null) {
       charsHtml = escapeHtml(slice);
     }
 
-    words.push(`
-      <span class="hex-word">
-        <span class="word-idx">W${w}</span>
-        <span>${charsHtml}</span>
-      </span>
-    `);
+    words.push(`<span class="hex-word"><span>${charsHtml}</span></span>`);
   }
   return words.join("");
 }
@@ -151,11 +146,11 @@ function renderAll() {
   // Seal tag
   if (stateStore.sealValid) {
     els.sealStamp.className = "seal-tag seal-valid";
-    els.sealStamp.textContent = "DB SEAL: VALID";
+    els.sealStamp.textContent = "Baseline: Protected";
     els.sealBanner.classList.add("hidden");
   } else {
     els.sealStamp.className = "seal-tag seal-broken";
-    els.sealStamp.textContent = "DB SEAL: BROKEN";
+    els.sealStamp.textContent = "Baseline: Tampered!";
     els.sealBanner.classList.remove("hidden");
   }
 
@@ -219,12 +214,12 @@ function renderInspectionSheet() {
   if (!file) {
     els.inspectionStage.innerHTML = `
       <div class="empty-sheet">
-        <div class="empty-code">FIM // READY</div>
-        <h2>Select or Register a File to Begin Inspection</h2>
+        <div class="empty-code">GETTING STARTED</div>
+        <h2>Select a File to Start Monitoring</h2>
         <p>
-          Choose a file using <strong>Select File...</strong> above to compute its 256-bit SHA-256 reference hash
-          and fixed-size block digests. Re-verify at any time to detect unauthorized modifications,
-          data appends, truncations, or file renames.
+          Click <strong>Select File...</strong> above to generate and save a file's reference SHA-256 hash.
+          Whenever you check the file later, this tool generates a new hash and shows whether the file
+          is intact, modified, renamed, or deleted.
         </p>
       </div>
     `;
@@ -236,47 +231,45 @@ function renderInspectionSheet() {
   const curHash = file.current_hash;
 
   // Digest comparison summary note
-  let digestNote = "Exact 256-bit match (all 64 hexadecimal digits identical to stored baseline)";
+  let digestNote = "Current hash matches the saved reference hash — file is untouched.";
   if (st === "MODIFIED" && curHash) {
     const diffNibbles = countChangedNibbles(refHash, curHash);
-    const pct = diffNibbles != null ? ((diffNibbles / 64) * 100).toFixed(1) : "0";
-    digestNote = `Mismatch detected: ${diffNibbles} of 64 hex nibbles changed (${pct}% avalanche spread)`;
+    digestNote = `Hashes do not match (${diffNibbles} of 64 characters changed — highlighted in red above).`;
   } else if (st === "RENAMED" && file.moved_to) {
-    digestNote = `Relocated file matched by SHA-256 at: ${file.moved_to}`;
+    digestNote = `Same SHA-256 hash was found under a new filename: ${file.moved_to}`;
   } else if (st === "MISSING") {
-    digestNote = "Target file no longer exists at its registered path";
+    digestNote = "File could not be found at its monitored location.";
   } else if (st === "UNTRUSTED") {
-    digestNote = "Baseline database seal failed verification — stored reference hash cannot be trusted";
+    digestNote = "Warning: baseline.json was edited outside this tool, so stored hashes cannot be trusted.";
   }
 
   const sizeDeltaText =
     file.size_delta > 0
-      ? `+${file.size_delta.toLocaleString()} B`
+      ? `+${file.size_delta.toLocaleString()} bytes`
       : file.size_delta < 0
-      ? `${file.size_delta.toLocaleString()} B`
-      : "0 B";
+      ? `${file.size_delta.toLocaleString()} bytes`
+      : "Unchanged";
 
   // Block matrix HTML
-  let blockMatrixHtml = `<p class="sec-note">Block map unavailable (file is empty or missing).</p>`;
+  let blockMatrixHtml = `<p class="sec-note">Part-by-part view unavailable (file is empty or missing).</p>`;
   const br = file.block_report;
   if (br && Array.isArray(br.segments) && br.segments.length > 0) {
     const stateLabels = {
-      intact: "OK",
-      modified: "DIFF",
-      appended: "+NEW",
-      truncated: "CUT",
+      intact: "Unchanged",
+      modified: "Changed",
+      appended: "Added",
+      truncated: "Removed",
     };
     const cells = br.segments
       .map((seg) => {
         const tag = stateLabels[seg.state] || seg.state;
-        const idxPadded = String(seg.index).padStart(2, "0");
         return `
           <div class="blk-cell blk-${escapeHtml(seg.state)}">
             <div class="blk-top">
-              <span>B${idxPadded}</span>
+              <span>Part ${seg.index}</span>
               <span class="blk-state">${escapeHtml(tag)}</span>
             </div>
-            <div class="blk-range">${seg.start_byte.toLocaleString()}–${seg.end_byte.toLocaleString()} B</div>
+            <div class="blk-range">Bytes ${seg.start_byte.toLocaleString()}–${seg.end_byte.toLocaleString()}</div>
           </div>
         `;
       })
@@ -289,14 +282,14 @@ function renderInspectionSheet() {
 
   const acceptBtn =
     file.status === "MODIFIED" && stateStore.sealValid
-      ? `<button class="btn btn-ochre btn-sm" data-file-action="rebaseline" data-path="${escapeHtml(file.path)}">Approve &amp; Update Baseline</button>`
+      ? `<button class="btn btn-ochre btn-sm" data-file-action="rebaseline" data-path="${escapeHtml(file.path)}">Save as New Baseline</button>`
       : "";
 
   els.inspectionStage.innerHTML = `
     <article class="inspection-sheet">
       <div class="sheet-top">
         <div>
-          <div class="sheet-file-kicker">Cryptographic Inspection Sheet</div>
+          <div class="sheet-file-kicker">File Integrity Report</div>
           <h2 class="sheet-file-title">${escapeHtml(file.file_name)}</h2>
           <div class="sheet-file-path">${escapeHtml(file.path)}</div>
         </div>
@@ -305,32 +298,32 @@ function renderInspectionSheet() {
 
       <div class="sheet-meta-bar">
         <div class="meta-specs">
-          <span>Baseline Size: <strong>${formatBytes(file.reference_size)}</strong></span>
+          <span>Saved Size: <strong>${formatBytes(file.reference_size)}</strong></span>
           <span>Current Size: <strong>${file.current_size != null ? formatBytes(file.current_size) : "N/A"}</strong></span>
-          <span>Delta: <strong>${escapeHtml(sizeDeltaText)}</strong></span>
-          <span>Last Verified: <strong>${escapeHtml(file.checked_at || "-")}</strong></span>
+          <span>Size Change: <strong>${escapeHtml(sizeDeltaText)}</strong></span>
+          <span>Last Checked: <strong>${escapeHtml(file.checked_at || "-")}</strong></span>
         </div>
         <div class="sheet-actions">
-          <button class="btn btn-paper btn-sm" data-file-action="check" data-path="${escapeHtml(file.path)}">Re-Verify Now</button>
+          <button class="btn btn-paper btn-sm" data-file-action="check" data-path="${escapeHtml(file.path)}">Check Now</button>
           ${acceptBtn}
-          <button class="btn btn-danger-outline btn-sm" data-file-action="remove" data-path="${escapeHtml(file.path)}">Stop Tracking</button>
+          <button class="btn btn-danger-outline btn-sm" data-file-action="remove" data-path="${escapeHtml(file.path)}">Remove</button>
         </div>
       </div>
 
-      <!-- Section 1: 8-Word SHA-256 Comparison -->
+      <!-- Section 1: SHA-256 Comparison -->
       <div class="sheet-section">
         <div class="sec-heading">
-          <span class="sec-title">01 // 256-Bit SHA-256 Digest Comparison (8 &times; 32-Bit Words)</span>
-          <span class="sec-note">Algorithm: hashlib.sha256()</span>
+          <span class="sec-title">SHA-256 Hash Comparison</span>
+          <span class="sec-note">Generated with Python hashlib.sha256()</span>
         </div>
 
         <div class="digest-grid">
           <div class="digest-row">
-            <div class="digest-label">REFERENCE HASH</div>
+            <div class="digest-label">Saved Hash</div>
             <div class="digest-words">${renderDigestWords(refHash, null)}</div>
           </div>
           <div class="digest-row">
-            <div class="digest-label">CURRENT HASH</div>
+            <div class="digest-label">Current Hash</div>
             <div class="digest-words">${renderDigestWords(curHash, st === "MODIFIED" ? refHash : null)}</div>
           </div>
         </div>
@@ -340,19 +333,19 @@ function renderInspectionSheet() {
         </div>
       </div>
 
-      <!-- Section 2: Byte-Offset Block Matrix -->
+      <!-- Section 2: File Parts Map -->
       <div class="sheet-section">
         <div class="sec-heading">
-          <span class="sec-title">02 // Fixed-Block Byte Integrity Matrix</span>
-          <span class="sec-note">${br ? `Block size: ~${br.block_size.toLocaleString()} bytes` : ""}</span>
+          <span class="sec-title">Where the File Changed (File Split into Equal Parts)</span>
+          <span class="sec-note">${br ? `Each part covers ~${br.block_size.toLocaleString()} bytes from start to end` : ""}</span>
         </div>
         ${blockMatrixHtml}
       </div>
 
-      <!-- Section 3: Plain-English Forensic Finding -->
+      <!-- Section 3: Summary -->
       <div class="sheet-section">
         <div class="sec-heading">
-          <span class="sec-title">03 // Inspection Finding</span>
+          <span class="sec-title">Integrity Summary</span>
         </div>
         <div class="finding-box ${findingTone}">
           ${escapeHtml(file.diagnosis || "Reference baseline recorded.")}

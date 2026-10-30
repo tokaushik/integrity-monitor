@@ -228,10 +228,16 @@ def _build_diagnosis(
     if first_change_index is not None:
         start_b = first_change_index * ref_block_size
         end_b = min((first_change_index + 1) * ref_block_size, max(ref_size, current_size))
+        part_num = first_change_index + 1
+        if current_size != ref_size and modified_count > 1:
+            return (
+                f"Modification starts in Part {part_num} (bytes {start_b:,}-{end_b:,}); "
+                f"later parts also shifted because file size changed"
+            )
         altered_total = modified_count + appended_count + truncated_count
         return (
-            f"Tampering detected across {altered_total} block(s); "
-            f"first divergence in Block {first_change_index + 1} (bytes {start_b:,}-{end_b:,})"
+            f"Modified in {altered_total} part(s); "
+            f"first change in Part {part_num} (bytes {start_b:,}-{end_b:,})"
         )
 
     return "Cryptographic SHA-256 mismatch detected"

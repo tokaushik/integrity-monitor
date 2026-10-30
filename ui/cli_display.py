@@ -78,31 +78,31 @@ def format_size_delta(delta: int) -> str:
 
 
 def render_block_strip(block_report: dict | None) -> str:
-    """Render numbered block statuses (e.g. B01:ok B02:DIFF B03:ok)."""
+    """Render readable part-by-part statuses (e.g. Part 1:ok  Part 2:CHANGED)."""
     if not block_report:
         return "N/A"
     segments = block_report.get("segments", [])
     if not segments:
-        return "[empty file - 0 blocks]"
+        return "[empty file - 0 parts]"
 
     tokens = []
     for seg in segments:
-        idx_str = f"B{seg['index']:02d}"
+        idx_str = f"Part {seg['index']}"
         state = seg.get("state")
         if state == "intact":
             tokens.append(colorize(f"{idx_str}:ok", Style.DIM))
         elif state == "modified":
-            tokens.append(colorize(f"{idx_str}:DIFF", Style.BOLD, Style.RED))
+            tokens.append(colorize(f"{idx_str}:CHANGED", Style.BOLD, Style.RED))
         elif state == "appended":
-            tokens.append(colorize(f"{idx_str}:+NEW", Style.BOLD, Style.AMBER))
+            tokens.append(colorize(f"{idx_str}:ADDED", Style.BOLD, Style.AMBER))
         elif state == "truncated":
-            tokens.append(colorize(f"{idx_str}:CUT", Style.BOLD, Style.RED))
+            tokens.append(colorize(f"{idx_str}:REMOVED", Style.BOLD, Style.RED))
         else:
             tokens.append(f"{idx_str}:?")
 
     block_sz = block_report.get("block_size", 0)
     joined = "  ".join(tokens)
-    return f"{joined}  (~{block_sz:,} B/block)"
+    return f"{joined}  (~{block_sz:,} B each)"
 
 
 def print_banner(tracked_count: int, seal_valid: bool) -> None:
@@ -185,7 +185,7 @@ def print_check_result(result: dict) -> None:
         print(f"  Timestamp    : {result['current_mtime']}")
 
     if result.get("block_report") and status == "MODIFIED":
-        print(f"  Block Matrix : {render_block_strip(result['block_report'])}")
+        print(f"  File Parts   : {render_block_strip(result['block_report'])}")
 
     print(f"  Finding      : {result['diagnosis']}")
     print(border)

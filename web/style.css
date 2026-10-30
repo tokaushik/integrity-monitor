@@ -719,7 +719,7 @@ code {
 /* Numbered Byte-Segment Block Matrix */
 .block-matrix {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
   gap: 8px;
 }
 
