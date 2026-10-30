@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>File Integrity Workbench // SHA-256</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- Top Workbench Bar -->
+  <header class="workbench-bar">
+    <div class="bar-left">
+      <span class="spec-tag">SHA-256 // OS+HASHLIB</span>
+      <div class="title-block">
+        <h1>File Integrity Workbench</h1>
+      </div>
+
+      <nav class="view-tabs" aria-label="Views">
+        <button class="view-tab active" data-view="inspector">Inspector</button>
+        <button class="view-tab" data-view="ledger">Summary Ledger <span id="tab-count-total" class="tab-num">0</span></button>
+        <button class="view-tab" data-view="audit">Audit Log</button>
+      </nav>
+    </div>
+
+    <div class="bar-right">
+      <div id="seal-stamp" class="seal-tag seal-valid" title="Keyed SHA-256 seal protecting baseline.json">
+        DB SEAL: VALID
+      </div>
+
+      <label class="poll-switch" title="Automatically re-verify all tracked files every 3 seconds">
+        <input type="checkbox" id="live-watch-checkbox" />
+        <span>Auto-Poll (3s)</span>
+      </label>
+
+      <button id="btn-check-all" class="btn btn-primary">Verify All Files</button>
+    </div>
+  </header>
+
+  <!-- Critical Seal Warning Banner -->
+  <div id="seal-alert-banner" class="seal-warning hidden">
+    <strong>BASELINE TAMPERING DETECTED:</strong>
+    <code>baseline.json</code> failed cryptographic seal verification. Stored reference hashes may have been edited outside this tool.
+  </div>
+
+  <!-- Registration Toolbar -->
+  <section class="register-strip">
+    <div class="register-inner">
+      <label for="path-input" class="strip-label">REGISTER TARGET:</label>
+      <input
+        type="text"
+        id="path-input"
+        placeholder="Paste a file or directory path, or use Browse..."
+        autocomplete="off"
+      />
+      <button id="btn-add-path" class="btn btn-ink">Record Baseline</button>
+      <div class="strip-divider"></div>
+      <button id="btn-browse-file" class="btn btn-paper">Select File...</button>
+      <button id="btn-browse-folder" class="btn btn-paper">Select Folder...</button>
+      <span id="status-notice" class="status-notice">Ready</span>
+    </div>
+  </section>
+
+  <!-- Main Workspace Area -->
+  <main class="workspace-shell">
+    <!-- VIEW 1: SPLIT INSPECTOR WORKBENCH -->
+    <section id="view-inspector" class="workbench-split">
+      <!-- Left File Registry Rail -->
+      <aside class="registry-rail">
+        <div class="rail-header">
+          <span class="rail-title">TRACKED REGISTRY</span>
+          <div class="filter-group">
+            <button class="filter-btn active" data-filter="all">All (<span id="cnt-all">0</span>)</button>
+            <button class="filter-btn" data-filter="verified">OK (<span id="cnt-ok">0</span>)</button>
+            <button class="filter-btn" data-filter="flagged">Flagged (<span id="cnt-flagged">0</span>)</button>
+          </div>
+        </div>
+
+        <div id="registry-list" class="registry-list">
+          <div class="rail-empty">No files registered yet.</div>
+        </div>
+      </aside>
+
+      <!-- Right Cryptographic Inspection Sheet -->
+      <div id="inspection-stage" class="inspection-stage">
+        <div class="empty-sheet">
+          <div class="empty-code">FIM // READY</div>
+          <h2>Select or Register a File to Begin Inspection</h2>
+          <p>
+            Choose a file using <strong>Select File...</strong> above to compute its 256-bit SHA-256 reference hash
+            and fixed-size block digests. Re-verify at any time to detect unauthorized modifications,
+            data appends, truncations, or file renames.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: FULL SUMMARY LEDGER TABLE -->
+    <section id="view-ledger" class="ledger-view hidden">
+      <div class="sheet-card">
+        <div class="sheet-card-head">
+          <h2>Monitored Baseline Ledger</h2>
+          <span id="ledger-scan-meta" class="meta-caption">Showing all tracked files</span>
+        </div>
+        <div id="ledger-table-wrap" class="table-wrap"></div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: AUDIT EVENT LOG -->
+    <section id="view-audit" class="ledger-view hidden">
+      <div class="sheet-card">
+        <div class="sheet-card-head">
+          <h2>Cryptographic Audit Trail</h2>
+          <button id="btn-reset-db" class="btn btn-danger-outline btn-sm">Reset Baseline Database</button>
+        </div>
+        <div id="audit-table-wrap" class="table-wrap"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
